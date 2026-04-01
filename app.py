@@ -4,10 +4,6 @@ import psycopg2
 import plotly.express as px
 from datetime import datetime
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CONFIGURAÇÃO DA PÁGINA
-# ─────────────────────────────────────────────────────────────────────────────
-
 st.set_page_config(
     page_title="Anomalias — Contratos Ceará",
     page_icon="🔍",
@@ -17,9 +13,6 @@ st.set_page_config(
 st.title("🔍 Painel de Anomalias — Contratos Públicos do Ceará")
 st.caption(f"Atualizado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CONEXÃO COM SUPABASE
-# ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=300)
 def carregar_anomalias():
@@ -60,9 +53,7 @@ if df.empty:
     st.warning("Nenhuma anomalia encontrada ou banco ainda sem dados.")
     st.stop()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MÉTRICAS DO TOPO
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── MÉTRICAS ─────────────────────────────────────────────────────────────────
 
 resumo = df["nivel_risco"].value_counts().to_dict()
 alto  = resumo.get("ALTO", 0)
@@ -71,16 +62,14 @@ baixo = resumo.get("BAIXO", 0)
 total = len(df)
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("🔴 ALTO",   alto)
-col2.metric("🟡 MÉDIO",  medio)
-col3.metric("🟢 BAIXO",  baixo)
-col4.metric("📋 Total",  total)
+col1.metric("🔴 ALTO",  alto)
+col2.metric("🟡 MÉDIO", medio)
+col3.metric("🟢 BAIXO", baixo)
+col4.metric("📋 Total", total)
 
 st.divider()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FILTROS
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── FILTROS ──────────────────────────────────────────────────────────────────
 
 col_f1, col_f2 = st.columns(2)
 
@@ -104,9 +93,7 @@ if orgaos:
 
 st.caption(f"{len(df_filtrado)} registros exibidos")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GRÁFICOS
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── GRÁFICOS ─────────────────────────────────────────────────────────────────
 
 col_g1, col_g2 = st.columns(2)
 
@@ -141,9 +128,7 @@ with col_g2:
     fig_bar.update_layout(yaxis={"categoryorder": "total ascending"})
     st.plotly_chart(fig_bar, use_container_width=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DISPERSÃO: VALOR x PRAZO
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── DISPERSÃO ────────────────────────────────────────────────────────────────
 
 st.subheader("Distribuição: Valor Global x Prazo de Vigência")
 fig_scatter = px.scatter(
@@ -161,9 +146,7 @@ fig_scatter = px.scatter(
 )
 st.plotly_chart(fig_scatter, use_container_width=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TABELA DETALHADA
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── TABELA ───────────────────────────────────────────────────────────────────
 
 st.subheader("Detalhamento das Anomalias")
 
@@ -184,15 +167,15 @@ df_exibir = df_filtrado[[
     "data_assinatura":     "Assinatura",
 })
 
+def colorir_linha(row):
+    if row["Risco"] == "ALTO":
+        return ["background-color: #fde8e8"] * len(row)
+    elif row["Risco"] == "MEDIO":
+        return ["background-color: #fef9e7"] * len(row)
+    return [""] * len(row)
+
 st.dataframe(
-    df_exibir.style.apply(
-        lambda row: [
-            "background-color: #fde8e8" if row["Risco"] == "ALTO"
-            else "background-color: #fef9e7" if row["Risco"] == "MEDIO"
-            else ""
-        ] * len(row),
-        axis=1,
-    ),
+    df_exibir.style.apply(colorir_linha, axis=1),
     use_container_width=True,
     height=500,
 )
