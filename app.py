@@ -150,16 +150,28 @@ st.plotly_chart(fig_scatter, use_container_width=True)
 
 st.subheader("Detalhamento das Anomalias")
 
+# Formata valor em R$
+df_filtrado = df_filtrado.copy()
+df_filtrado["valor_fmt"] = df_filtrado["valor_global"].apply(
+    lambda v: f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if pd.notna(v) else "-"
+)
+
+# Badge de risco colorido
+def badge_risco(risco):
+    cores = {"ALTO": "🔴", "MEDIO": "🟡", "BAIXO": "🟢"}
+    return f"{cores.get(risco, '')} {risco}"
+
+df_filtrado["risco_fmt"] = df_filtrado["nivel_risco"].apply(badge_risco)
+
 df_exibir = df_filtrado[[
-    "isn_sic", "nivel_risco", "percentil_risco", "score_anomalia",
-    "valor_global", "prazo_vigencia_dias", "fornecedor_nome",
-    "orgao_nome", "objeto", "data_assinatura"
+    "isn_sic", "risco_fmt", "percentil_risco",
+    "valor_fmt", "prazo_vigencia_dias",
+    "fornecedor_nome", "orgao_nome", "objeto", "data_assinatura"
 ]].rename(columns={
     "isn_sic":             "ISN SIC",
-    "nivel_risco":         "Risco",
+    "risco_fmt":           "Risco",
     "percentil_risco":     "Percentil",
-    "score_anomalia":      "Score",
-    "valor_global":        "Valor (R$)",
+    "valor_fmt":           "Valor",
     "prazo_vigencia_dias": "Prazo (dias)",
     "fornecedor_nome":     "Fornecedor",
     "orgao_nome":          "Órgão",
@@ -167,15 +179,27 @@ df_exibir = df_filtrado[[
     "data_assinatura":     "Assinatura",
 })
 
+# Cor de fundo por nível de risco
 def colorir_linha(row):
-    if row["Risco"] == "ALTO":
-        return ["background-color: #fde8e8"] * len(row)
-    elif row["Risco"] == "MEDIO":
-        return ["background-color: #fef9e7"] * len(row)
-    return [""] * len(row)
+    if "ALTO" in str(row["Risco"]):
+        return ["background-color: #fde8e8; color: #333"] * len(row)
+    elif "MEDIO" in str(row["Risco"]):
+        return ["background-color: #fef9e7; color: #333"] * len(row)
+    return ["background-color: #f0faf4; color: #333"] * len(row)
 
 st.dataframe(
     df_exibir.style.apply(colorir_linha, axis=1),
     use_container_width=True,
     height=500,
+    column_config={
+        "ISN SIC":     st.column_config.NumberColumn(width="small"),
+        "Risco":       st.column_config.TextColumn(width="small"),
+        "Percentil":   st.column_config.ProgressColumn(min_value=0, max_value=100, width="small"),
+        "Valor":       st.column_config.TextColumn(width="medium"),
+        "Prazo (dias)":st.column_config.NumberColumn(width="small"),
+        "Fornecedor":  st.column_config.TextColumn(width="large"),
+        "Órgão":       st.column_config.TextColumn(width="small"),
+        "Objeto":      st.column_config.TextColumn(width="large"),
+        "Assinatura":  st.column_config.DateColumn(width="small"),
+    }
 )
